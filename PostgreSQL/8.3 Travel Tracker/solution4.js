@@ -51,7 +51,7 @@ app.post("/add", async (req, res) => {
       res.redirect("/");
     } catch (err) {
       console.log(err);
-      const countries = await checkVisisted();
+      const countries = await checkVisited();
       res.render("index.ejs", {
         countries: countries,
         total: countries.length,

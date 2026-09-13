@@ -19,15 +19,16 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
 async function checkVisited() {
-  const result = await db.query("SELECT country_code from visited_countries");
+  const result = await db.query("SELECT country_code FROM visited_countries");
   let countries = [];
   result.rows.forEach((country) => {
     countries.push(country.country_code);
   })
   console.log(result.rows);
-  return countries
+  return countries;
 }
 
+//GET home page
 app.get("/", async (req, res) => {
   const countries = await checkVisited();
   res.render("index.ejs", { countries: countries, total: countries.length});
@@ -36,26 +37,42 @@ app.get("/", async (req, res) => {
 app.post("/add", async (req, res) => {
 //Retrieve the country name from the input field
   const input = req.body["country"];
+try {
+  //Query the countries table to find the country code for the given country name, using a lowercase comparason to make the searche case-insensitive and using the LIKE operator to allow for partial matches
   const result = await db.query(
-    "SELECT country_code FROM countries WHERE country_name = $1",
-    [input]
+    "SELECT country_code FROM countries WHERE LOWER(country_name) LIKE '%' || $1 || '%';",
+    [input.toLowerCase()]
   );
-  if (result.rows.length !== 0) {
-    //Take the first row of the result and store it in a variable called data
-    const data = result.rows[0];
-    //Retrieve the country code from the data variable
-    const countryCode = data.country_code;
-    //Insert the country code into the visited_countries table
-    await db.query("INSERT INTO visited_countries (country_code) VALUES ($1)", [
-      countryCode
-    ]
-    );
-    //Redirect the user back to the home page
+  const data = result.rows[0];
+  const countryCode = data.country_code;
+  //Insert the country code into the visited countries table
+  try {
+    await db.query(
+      "INSERT INTO visited_countries (country_code) VALUES ($1)",
+       [countryCode]
+    )
+    //Redirect to the home page after successful insertion
     res.redirect("/");
-  } else {
-    //If the country name is not found in the countries table, we send an error message to the user
-    res.send("Country not found");
-  }
+    //If the country code already exists in the visited countries table, catch the error and display an error message
+  } catch (err) {
+    console.log(err);
+      const countries = await checkVisited();
+      res.render("index.ejs", {
+        countries: countries,
+        total: countries.length,
+        error: "Country has already been added, try again.",
+      });
+};
+}catch (err) {
+  console.log(err);
+  //if the country 
+  const countries = await checkVisited();
+  res.render("index.ejs", {
+    countries: countries,
+    total: countries.length,
+    error: "Country name does not exist, try again.",
+  })
+};
 
  });
 
