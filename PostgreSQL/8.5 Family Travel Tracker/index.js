@@ -1,16 +1,19 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const port = 3000;
 
 const db = new pg.Client({
-  user: "nicolas",
-  host: "localhost",
-  database: "world",
-  password: "!Sospirolo2026",
-  port: 5432,
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
 });
 db.connect();
 
@@ -77,8 +80,18 @@ app.post("/user", async (req, res) => {
   
 
 app.post("/new", async (req, res) => {
-  //Hint: The RETURNING keyword can return the data that was inserted.
-  //https://www.postgresql.org/docs/current/dml-returning.html
+  try {
+    const result = await db.query(
+      `INSERT INTO family_members (name, color)
+       VALUES ($1, $2)
+       RETURNING *`,
+      [familyMemberName, color]
+    );
+
+    console.log(result.rows[0]);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 app.listen(port, () => {
